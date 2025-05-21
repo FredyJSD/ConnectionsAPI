@@ -4,7 +4,6 @@ import boto3
 import uuid
 
 
-
 app = Flask(__name__)
 
 # CREATE DB
