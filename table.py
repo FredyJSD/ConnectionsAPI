@@ -4,7 +4,7 @@ import boto3
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 
 
-table = dynamodb.create_table(
+user_table = dynamodb.create_table(
     TableName="Users",
     KeySchema=[
         {
@@ -16,9 +16,29 @@ table = dynamodb.create_table(
         {
             "AttributeName": "user_id",
             "AttributeType": "S"
+        }
+    ],
+    ProvisionedThroughput={
+        'ReadCapacityUnits': 5,
+        'WriteCapacityUnits': 5
+    }
+)
+
+prompts_table = dynamodb.create_table(
+    TableName="Prompts",
+    KeySchema=[
+        {
+            "AttributeName": "prompt_id",
+            "KeyType": "HASH"
+        }
+    ],
+    AttributeDefinitions=[
+        {
+            "AttributeName": "prompt_id",
+            "AttributeType": "S"
         },
         {
-            "AttributeName": "email",
+            "AttributeName": "user_id",
             "AttributeType": "S"
         }
     ],
@@ -28,20 +48,70 @@ table = dynamodb.create_table(
     },
     GlobalSecondaryIndexes=[
         {
-            'IndexName': 'EmailIndex',
-            'KeySchema': [
+            "IndexName": "UserIndex",
+            "KeySchema":[
                 {
-                    'AttributeName': 'email',
-                    'KeyType': 'HASH'
+                    "AttributeName": "user_id",
+                    "KeyType": "HASH"
                 }
             ],
-            'Projection': {
-                'ProjectionType': 'ALL'
+            "Projection" : {
+                "ProjectionType": "ALL"
             },
-            'ProvisionedThroughput': {
-                'ReadCapacityUnits': 5,
-                'WriteCapacityUnits': 5
-            }
+            "ProvisionedThroughput": {
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+            },
         }
     ]
 )
+
+sessions_table = dynamodb.create_table(
+    TableName="Sessions",
+    KeySchema=[
+        {
+            "AttributeName": "session_id",
+            "KeyType": "HASH"
+        }
+    ],
+    AttributeDefinitions=[
+        {
+            "AttributeName": "session_id",
+            "AttributeType": "S"
+        },
+        {
+            "AttributeName": "user_id",
+            "AttributeType": "S"
+        }
+    ],
+    ProvisionedThroughput={
+        'ReadCapacityUnits': 5,
+        'WriteCapacityUnits': 5
+    },
+    GlobalSecondaryIndexes=[
+        {
+            "IndexName": "UserIndex",
+            "KeySchema":[
+                {
+                    "AttributeName": "user_id",
+                    "KeyType": "HASH"
+                }
+            ],
+            "Projection" : {
+                "ProjectionType": "ALL"
+            },
+            "ProvisionedThroughput": {
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+            },
+        }
+    ]
+)
+
+user_table.meta.client.get_waiter('table_exists').wait(TableName='Users')
+prompts_table.meta.client.get_waiter('table_exists').wait(TableName='Prompts')
+sessions_table.meta.client.get_waiter('table_exists').wait(TableName='Sessions')
+
+print("✅ Table status (Users):", user_table.table_status)
+print("✅ Table status (Prompts):", prompts_table.table_status)
+print("✅ Table status (Sessions):", sessions_table.table_status)
