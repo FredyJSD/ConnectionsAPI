@@ -70,17 +70,21 @@ sessions_table = dynamodb.create_table(
     TableName="Sessions",
     KeySchema=[
         {
-            "AttributeName": "session_id",
+            "AttributeName": "user_id",
             "KeyType": "HASH"
+        },
+        { 
+            "AttributeName": "session_id", 
+            "KeyType": "RANGE" 
         }
     ],
     AttributeDefinitions=[
         {
-            "AttributeName": "session_id",
+            "AttributeName": "user_id",
             "AttributeType": "S"
         },
         {
-            "AttributeName": "user_id",
+            "AttributeName": "session_id",
             "AttributeType": "S"
         }
     ],

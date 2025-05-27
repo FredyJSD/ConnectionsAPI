@@ -14,12 +14,13 @@ users_table = dynamodb.Table('Users')
 
 
 # CREATE TABLE
-def create_prompt(prompt_text, level):
+def create_prompt(prompt_text, level, user_id):
     prompt_id = str(uuid.uuid4())
     prompts_table.put_item(Item={
-        'id': prompt_id,
+        'prompt_id': prompt_id, 
         'text': prompt_text,
         'level': level,
+        'user_id': user_id,       
         'public': True
     })
     return prompt_id
