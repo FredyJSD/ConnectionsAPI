@@ -62,10 +62,17 @@ def get_prompts():
     # Scan table and return items
     pass
 
+
 @app.route("/prompts", methods=["POST"])
 def add_prompt():
-    # Add prompt to DynamoDB
-    pass
+    data = request.json
+    user_id = data.get("user_id")
+    text = data.get("text")
+    level = data.get("level")
+
+    prompt_id = create_prompt(text, level, user_id)
+    return jsonify({"prompt_id": prompt_id}), 201
+
 
 @app.route("/prompts/<id>", methods=["DELETE"])
 def delete_prompt(id):

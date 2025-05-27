@@ -94,10 +94,10 @@ sessions_table = dynamodb.create_table(
     },
     GlobalSecondaryIndexes=[
         {
-            "IndexName": "UserIndex",
+            "IndexName": "SessionIndex",
             "KeySchema":[
                 {
-                    "AttributeName": "user_id",
+                    "AttributeName": "session_id",
                     "KeyType": "HASH"
                 }
             ],
