@@ -4,7 +4,7 @@ import boto3
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 
 
-user_table = dynamodb.create_table(
+users_table = dynamodb.create_table(
     TableName="Users",
     KeySchema=[
         {

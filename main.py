@@ -1,7 +1,10 @@
 from flask import Flask, jsonify, render_template, request
 import random
 import boto3
+from boto3.dynamodb.conditions import Key
 import uuid
+from jose import jwt
+
 
 
 app = Flask(__name__)
@@ -13,7 +16,37 @@ sessions_table = dynamodb.Table('Sessions')
 users_table = dynamodb.Table('Users')
 
 
-# CREATE TABLE
+#GET USER ID FROM TOKEN (UNVERIFIED)
+def get_user_id_from_request():
+    auth_header = request.headers.get("Authorization", "") #Get authorization from header (Bearer token)
+    token = auth_header.replace("Bearer ", "") #Obtains just the raw token itself
+
+    claims = jwt.get_unverified_claims(token)
+    return claims["sub"]  # user_id from Cognito
+
+
+# --------------------
+# Helper Functions
+# --------------------
+
+
+# GET PROMPTS
+def get_all_admin_prompts():
+    response = prompts_table.query(
+        IndexName="UserIndex",
+        KeyConditionExpression=Key("user_id").eq("ADMIN")
+    )
+    return response["Items"]
+
+def get_all_user_prompts(user_id):
+    response = prompts_table.query(
+        IndexName="UserIndex",
+        KeyConditionExpression=Key("user_id").eq(user_id)
+    )
+    return response["Items"]
+
+
+# CREATE PROMPT
 def create_prompt(prompt_text, level, user_id):
     prompt_id = str(uuid.uuid4())
     prompts_table.put_item(Item={
@@ -66,7 +99,8 @@ def get_prompts():
 @app.route("/prompts", methods=["POST"])
 def add_prompt():
     data = request.json
-    user_id = data.get("user_id")
+
+    user_id = get_user_id_from_request()
     text = data.get("text")
     level = data.get("level")
 
