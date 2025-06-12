@@ -10,10 +10,10 @@ from functools import wraps
 from dotenv import load_dotenv
 
 
+load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "random-key")
 oauth = OAuth(app)
-load_dotenv()
 
 
 oauth.register(
@@ -118,31 +118,41 @@ def index():
 # Auth Endpoints
 # --------------------
 
+@app.route('/register', methods=["POST"])
+def register():
+    data = request.json
+    result = register_user(data["email"], data["password"])
+    return jsonify(result)
 
-@app.route('/login')
+
+@app.route('/login', methods=["POST"])
 def login():
-    print("Redirect URI:", url_for('authorize', _external=True))
-    redirect_uri = url_for('authorize', _external=True)
-    return oauth.oidc.authorize_redirect(redirect_uri)
+    data = request.json
+    result = login_user(data["email"], data["password"])
+    return jsonify(result)
 
 
-@app.route('/authorize')
-def authorize():
-    token = oauth.oidc.authorize_access_token()
-    user = token['userinfo']
-    session['user'] = user
-    return redirect(url_for('index'))
+# @app.route('/authorize')
+# def authorize():
+#     token = oauth.oidc.authorize_access_token()
+#     user = token['userinfo']
+#     session['user'] = user
+#     return redirect(url_for('index'))
 
 
 @app.route("/me", methods=["GET"])
 @login_required
 def me():
-    user = session.get("user")
-    return jsonify({
-        "user_id": user.get("sub"),
-        "email": user.get("email")
-    }), 200
-
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        claims = verify_token(token)
+        return jsonify({
+            "user_id": claims["sub"],
+            "email": claims.get("email")
+        }), 200
+    except Exception:
+        return jsonify({"error": "Invalid token"}), 401
 
 # --------------------
 # Prompts Endpoints
