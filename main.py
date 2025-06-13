@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request, redirect, session, url_for
+from flask import Flask, jsonify, render_template, request, redirect, session, url_for, abort
 from authlib.integrations.flask_client import OAuth
 import os
 import random
@@ -8,6 +8,7 @@ import uuid
 from jose import jwt
 from functools import wraps
 from dotenv import load_dotenv
+import requests
 
 
 load_dotenv()
@@ -26,10 +27,45 @@ oauth.register(
 )
 
 # CREATE DB
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name=os.getenv('COGNITO_REGION'))
 prompts_table = dynamodb.Table('Prompts')
 sessions_table = dynamodb.Table('Sessions')
 users_table = dynamodb.Table('Users')
+
+# Cognito SDK client
+cognito_client = boto3.client('cognito-idp', region_name=os.getenv('COGNITO_REGION'))
+
+# Load public keys to verify tokens
+JWKS_URL = f"https://cognito-idp.{os.getenv('COGNITO_REGION')}.amazonaws.com/{os.getenv('USER_POOL_ID')}/.well-known/jwks.json"
+JWKS = requests.get(JWKS_URL).json()["keys"]
+
+
+# --------------------
+# Helper Functions for Verification
+# --------------------
+
+
+#VERIFY TOKEN
+def verify_token(token):
+    headers = jwt.get_unverified_header(token)
+
+    key = None
+    for k in JWKS:
+        if k["kid"] == headers["kid"]:
+            key = k
+            break
+
+    if key is None:
+        raise ValueError("No matching key found for the given 'kid'")
+
+    claims = jwt.decode(
+        token, 
+        key, 
+        algorithms=["RS256"], 
+        audience=os.getenv("CLIENT_ID"), 
+        issuer=f"https://cognito-idp.{os.getenv('COGNITO_REGION')}.amazonaws.com/{os.getenv('USER_POOL_ID')}"
+    )
+    return claims
 
 
 #GET USER ID FROM TOKEN (UNVERIFIED)
@@ -39,15 +75,16 @@ def get_user_id_from_request():
     
     auth_header = request.headers.get("Authorization", "") #Get authorization from header (Bearer token)
     token = auth_header.replace("Bearer ", "") #Obtains just the raw token itself
+
     try:
-        claims = jwt.get_unverified_claims(token)
+        claims = verify_token(token)
         return claims["sub"]  # user_id from Cognito
     except Exception:
-        os.abort(401, description="Invalid or missing token")
+        abort(401, description="Invalid or missing token")
 
 
 # --------------------
-# Helper Functions
+# Helper Functions for Endpoints
 # --------------------
 
 
