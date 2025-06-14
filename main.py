@@ -45,7 +45,7 @@ JWKS = requests.get(JWKS_URL).json()["keys"]
 # --------------------
 
 
-#VERIFY TOKEN
+# VERIFY TOKEN
 def verify_token(token):
     headers = jwt.get_unverified_header(token)
 
@@ -68,7 +68,7 @@ def verify_token(token):
     return claims
 
 
-#GET USER ID FROM TOKEN (UNVERIFIED)
+# GET USER ID FROM TOKEN
 def get_user_id_from_request():
     if 'user' in session:
         return session["user"].get("sub")
@@ -81,6 +81,44 @@ def get_user_id_from_request():
         return claims["sub"]  # user_id from Cognito
     except Exception:
         abort(401, description="Invalid or missing token")
+
+# Register New User 
+def register_user(email, password):
+    try:
+        cognito_client.sign_up(
+            ClientID=os.getenv('CLIENT_ID'),
+            Username=email,
+            Password=password,
+            UserAttributes=[
+            {
+                'Name': 'email',
+                'Value': email
+            },
+            ],
+        )
+        return {"message": "User registered. Please confirm via email."}
+    except Exception as e:
+        return jsonify("Signup failed", e)
+
+
+# Login User and Obtain JWT Token
+def login_user(email, password):
+    try:
+        response = cognito_client.initiate_auth(
+            ClientId = os.getenv('CLIENT_ID'),
+            AuthFlow='USER_PASSWORD_AUTH',
+            AuthParameters = {
+                'USERNAME': email,
+                'PASSWORD': password
+            }
+        )
+        return {
+            "Access Token": response["AuthenticationResult"]["AccessToken"],
+            "Bearer Token": response["AuthenticationResult"]["IdToken"]
+        }
+    except Exception as e:
+        return("Login failed:", e)
+    
 
 
 # --------------------
