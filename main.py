@@ -83,11 +83,11 @@ def get_user_id_from_request():
         abort(401, description="Invalid or missing token")
 
 # Register New User 
-def register_user(email, password):
+def register_user(username, email, password):
     try:
         cognito_client.sign_up(
-            ClientID=os.getenv('CLIENT_ID'),
-            Username=email,
+            ClientId=os.getenv('CLIENT_ID'),
+            Username=username,
             Password=password,
             UserAttributes=[
             {
@@ -98,7 +98,7 @@ def register_user(email, password):
         )
         return {"message": "User registered. Please confirm via email."}
     except Exception as e:
-        return jsonify("Signup failed", e)
+        return {"error": f"Signup failed: {str(e)}"}
 
 
 # Login User and Obtain JWT Token
@@ -113,11 +113,11 @@ def login_user(email, password):
             }
         )
         return {
-            "Access Token": response["AuthenticationResult"]["AccessToken"],
-            "Bearer Token": response["AuthenticationResult"]["IdToken"]
+            "access_token": response["AuthenticationResult"]["AccessToken"],
+            "id_token": response["AuthenticationResult"]["IdToken"]
         }
     except Exception as e:
-        return("Login failed:", e)
+        return {"error": f"Login failed: {str(e)}"}
     
 
 
@@ -131,10 +131,17 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
-            if request.accept_mimetypes.best == 'application/json': #For API Calls return JSON
-                return jsonify({"error": "Authentication required"}), 401
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
+            return f(*args, **kwargs)
+
+        authorization_header = request.header.get("Authorization", "")
+        token = authorization_header.replace("Bearer ", "")
+        try:
+            claims = verify_token(token)
+            # Optionally cache in request context or session
+            return f(*args, **kwargs)
+        except Exception:
+            return jsonify({"error": "Authentication required"}), 401
+
     return decorated_function
 
 
@@ -196,7 +203,7 @@ def index():
 @app.route('/register', methods=["POST"])
 def register():
     data = request.json
-    result = register_user(data["email"], data["password"])
+    result = register_user(data["username"], data["email"], data["password"])
     return jsonify(result)
 
 
