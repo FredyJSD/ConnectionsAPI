@@ -9,6 +9,7 @@ from jose import jwt
 from functools import wraps
 from dotenv import load_dotenv
 import requests
+from datetime import datetime, timezone
 
 
 load_dotenv()
@@ -188,13 +189,60 @@ def delete_prompt_by_id(prompt_id):
     prompts_table.delete_item(Key={'prompt_id': prompt_id})
 
 
-@app.route('/')
-def index():
-    user = session.get('user')
-    if user:
-        return  f'Hello, {user["email"]}. <a href="/logout">Logout</a>'
-    else:
-        return f'Welcome! Please <a href="/login">Login</a>.'
+# Create Session
+def create_session(user_id, session_id, prompts):
+    sessions_table.put_item(Item={
+        'session_id': session_id,
+        'user_id': user_id,
+        'prompts': prompts, 
+        'responses': [],
+        'created_at': datetime.utcnow().isoformat() + "Z"
+
+    })
+    return jsonify({'Created Session': session_id})
+
+
+# Get 10 Prompts for Session
+def session_prompts(user_id, level=None):
+    admin_prompts = get_all_admin_prompts()
+    user_prompts = get_all_user_prompts(user_id)
+    all_prompts = admin_prompts + user_prompts
+
+    if level:
+        all_prompts = [p for p in all_prompts if level.lower() == p.get("level").lower()]
+
+    random.shuffle(all_prompts)
+    selected_prompts = all_prompts[:10]
+    
+    response = []
+    for prompt in selected_prompts:
+        response.append({
+            'prompt_id': prompt["prompt_id"],
+            'text': prompt['prompt_text'],
+            'level': prompt['level']
+        })
+
+    return response
+
+
+# Get Session Prompts
+def get_session_prompts(session_id):
+    response = sessions_table.get_item(
+        Key={'session_id': session_id}
+    )
+
+    item = response["Item"]
+
+    if not item:
+        return jsonify({'error': 'Session not found'}), 404
+    
+    prompts = item["prompts"]
+    if prompts is None:
+        return jsonify({'error': 'Prompts not found for this session'}), 404
+
+    
+    return jsonify({'prompts': prompts}), 200
+
 
 # --------------------
 # Auth Endpoints
@@ -324,17 +372,33 @@ def delete_prompt(id):
 # --------------------
 
 
-@app.route("/sessions", methods=["POST"])
-@app.route("/sessions/<id>", methods=["GET"])
-@app.route("/sessions/<id>/respond", methods=["POST"])
-def sessions():
+@app.route("/sessions/new/<session_id>", methods=["POST"])
+@login_required
+def sessions(session_id):
+    level = request.args.get("level")
+    user_id = get_user_id_from_request()
+    prompts = session_prompts(user_id, level)
+    create_session(user_id, session_id, prompts)
+    return jsonify({"session_id": session_id}), 201
+
+
+
+@app.route("/sessions/<session_id>", methods=["GET"])
+@login_required
+def get_session(session_id):
+    return get_session_prompts(session_id)
+
+
+@app.route("/sessions/<session_id>/respond", methods=["POST"])
+@login_required
+def respond(session_id):
     pass
 
 
 @app.route('/logout')
 def logout():
     session.pop('user', None)
-    return redirect(url_for('index'))
+    return jsonify("User Logged Out")
 
 
 if __name__ == '__main__':
