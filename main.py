@@ -195,9 +195,7 @@ def create_session(user_id, session_id, prompts):
         'session_id': session_id,
         'user_id': user_id,
         'prompts': prompts, 
-        'responses': [],
         'created_at': datetime.utcnow().isoformat() + "Z"
-
     })
     return jsonify({'Created Session': session_id})
 
@@ -219,7 +217,8 @@ def session_prompts(user_id, level=None):
         response.append({
             'prompt_id': prompt["prompt_id"],
             'text': prompt['prompt_text'],
-            'level': prompt['level']
+            'level': prompt['level'],
+            'response': None
         })
 
     return response
@@ -242,6 +241,10 @@ def get_session_prompts(session_id):
 
     
     return jsonify({'prompts': prompts}), 200
+
+# Response Helper Function
+def prompt_response(session_id, prompt_id):
+    pass
 
 
 # --------------------
@@ -392,7 +395,33 @@ def get_session(session_id):
 @app.route("/sessions/<session_id>/respond", methods=["POST"])
 @login_required
 def respond(session_id):
-    pass
+    data = request.json
+
+    response = sessions_table.get_item(
+        Key={'session_id': session_id}
+    )
+    item = response["Item"]
+
+    if not item:
+        return jsonify({'error': 'Session not found'}), 404
+    
+    prompts = item["prompts"]
+
+    if prompts is None:
+        return jsonify({'error': 'Prompts not found for this session'}), 404
+
+    for prompt in prompts:
+        if prompt["prompt_id"] == data["prompt_id"]:
+            if prompt["response"] == None:
+                prompt["response"] = data["response"]
+                break
+            else:
+                return jsonify({"Response Already Exists": prompt['response']}), 403
+    
+    sessions_table.put_item(Item=item)
+
+    return jsonify({"Response Added": data['response']}), 201
+
 
 
 @app.route('/logout')
