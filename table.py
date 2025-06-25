@@ -112,10 +112,10 @@ sessions_table = dynamodb.create_table(
     ]
 )
 
-user_table.meta.client.get_waiter('table_exists').wait(TableName='Users')
+users_table.meta.client.get_waiter('table_exists').wait(TableName='Users')
 prompts_table.meta.client.get_waiter('table_exists').wait(TableName='Prompts')
 sessions_table.meta.client.get_waiter('table_exists').wait(TableName='Sessions')
 
-print("✅ Table status (Users):", user_table.table_status)
+print("✅ Table status (Users):", users_table.table_status)
 print("✅ Table status (Prompts):", prompts_table.table_status)
 print("✅ Table status (Sessions):", sessions_table.table_status)
