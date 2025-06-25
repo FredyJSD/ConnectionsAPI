@@ -223,6 +223,19 @@ def session_prompts(user_id, level=None):
 
     return response
 
+# Get Specific Session
+def get_session(session_id):
+    response = sessions_table.get_item(
+        Key={"session_id": session_id}
+    )
+
+    return response["Item"] #Will return None if not found
+
+
+# Delete Session
+def delete_session_record(session_id):
+    sessions_table.delete_item(Key={'session_id': session_id})
+
 
 # Get Session Prompts
 def get_session_prompts(session_id):
@@ -239,7 +252,6 @@ def get_session_prompts(session_id):
     if prompts is None:
         return jsonify({'error': 'Prompts not found for this session'}), 404
 
-    
     return jsonify({'prompts': prompts}), 200
 
 
@@ -424,6 +436,22 @@ def respond(session_id):
     data = request.json
     return prompt_response(session_id, data)
 
+
+@app.route("/sessions/<session_id>", methods=["DELETE"])
+@login_required
+def delete_session(session_id):
+    session_to_delete = get_session(session_id)
+
+    if not session_to_delete:
+        return jsonify({"error": "Prompt doesn't exist"}), 404
+    
+    user_id = get_user_id_from_request()
+
+    if user_id != session_to_delete["user_id"]:
+        return jsonify({"error": "User doesn't have permission"}), 403
+    
+    delete_session_record(session_id)
+    return jsonify({"message": f"Success: Session {session_id} deleted"}), 200
 
 
 @app.route('/logout')
