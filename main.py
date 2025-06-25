@@ -242,9 +242,35 @@ def get_session_prompts(session_id):
     
     return jsonify({'prompts': prompts}), 200
 
+
 # Response Helper Function
-def prompt_response(session_id, prompt_id):
-    pass
+def prompt_response(session_id, data):
+    if "prompt_id" not in data or "response" not in data:
+        return jsonify({"error": "Missing prompt_id or response"}), 400
+
+    response = sessions_table.get_item(
+        Key={'session_id': session_id}
+    )
+    item = response["Item"]
+
+    if not item:
+        return jsonify({'error': 'Session not found'}), 404
+    
+    prompts = item["prompts"]
+
+    if prompts is None:
+        return jsonify({'error': 'Prompts not found for this session'}), 404
+
+    for prompt in prompts:
+        if prompt["prompt_id"] == data["prompt_id"]:
+            if prompt["response"] == None:
+                prompt["response"] = data["response"]
+                sessions_table.put_item(Item=item)
+                return jsonify({"status": "success", "message": "Response recorded"}), 201
+            else:
+                return jsonify({"Response Already Exists": prompt['response']}), 403
+    
+    return jsonify({"error": "Prompt ID not found in session"}), 404
 
 
 # --------------------
@@ -371,7 +397,7 @@ def delete_prompt(id):
 
 
 # --------------------
-# Session Endpoints (Stubbed)
+# Session Endpoints
 # --------------------
 
 
@@ -396,31 +422,7 @@ def get_session(session_id):
 @login_required
 def respond(session_id):
     data = request.json
-
-    response = sessions_table.get_item(
-        Key={'session_id': session_id}
-    )
-    item = response["Item"]
-
-    if not item:
-        return jsonify({'error': 'Session not found'}), 404
-    
-    prompts = item["prompts"]
-
-    if prompts is None:
-        return jsonify({'error': 'Prompts not found for this session'}), 404
-
-    for prompt in prompts:
-        if prompt["prompt_id"] == data["prompt_id"]:
-            if prompt["response"] == None:
-                prompt["response"] = data["response"]
-                break
-            else:
-                return jsonify({"Response Already Exists": prompt['response']}), 403
-    
-    sessions_table.put_item(Item=item)
-
-    return jsonify({"Response Added": data['response']}), 201
+    return prompt_response(session_id, data)
 
 
 
