@@ -59,7 +59,7 @@ def delete_prompt_by_id(prompt_id):
 
 
 # Obtains either all prompts or filters prompts to obtain all prompts of the same level
-@prompts_bp.route("/prompts", methods=["GET"])
+@prompts_bp.route("/", methods=["GET"])
 @login_required
 def get_all_prompts():
     user_id = get_user_id_from_request()
@@ -79,7 +79,7 @@ def get_all_prompts():
 
 
 # Obtains a specific prompt from a specific level
-@prompts_bp.route("/prompts/random", methods=["GET"])
+@prompts_bp.route("/random", methods=["GET"])
 @login_required
 def get_random_prompt():
     level = request.args.get("level")
@@ -105,10 +105,12 @@ def get_random_prompt():
 
 
 # Add a prompt
-@prompts_bp.route("/prompts", methods=["POST"])
+@prompts_bp.route("/", methods=["POST"])
 @login_required
 def add_prompt():
     data = request.json
+    if "text" not in data or "level" not in data:
+        return jsonify({"error": "Missing text or level"}), 400
 
     user_id = get_user_id_from_request()
     text = data.get("text")
@@ -119,7 +121,7 @@ def add_prompt():
 
 
 # Delete prompt by ID from DynamoDB
-@prompts_bp.route("/prompts/<id>", methods=["DELETE"])
+@prompts_bp.route("/<id>", methods=["DELETE"])
 @login_required
 def delete_prompt(id):
     prompt_to_delete = get_specific_prompt(id)

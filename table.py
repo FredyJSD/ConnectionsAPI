@@ -1,121 +1,150 @@
 import boto3
+from config import REGION
 
 
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name=REGION)
+
+def create_users_table():
+    try:
+        users_table = dynamodb.create_table(
+            TableName="Users",
+            KeySchema=[
+                {
+                    "AttributeName": "user_id",
+                    'KeyType': 'HASH'
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    "AttributeName": "user_id",
+                    "AttributeType": "S"
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
+            }
+        )
+    except dynamodb.meta.client.exceptions.ResourceInUseException:
+        users_table = dynamodb.Table("Users")
 
 
-users_table = dynamodb.create_table(
-    TableName="Users",
-    KeySchema=[
-        {
-            "AttributeName": "user_id",
-            'KeyType': 'HASH'
-        }
-    ],
-    AttributeDefinitions=[
-        {
-            "AttributeName": "user_id",
-            "AttributeType": "S"
-        }
-    ],
-    ProvisionedThroughput={
-        'ReadCapacityUnits': 5,
-        'WriteCapacityUnits': 5
-    }
-)
+def create_prompts_table():
+    try:
+        prompts_table = dynamodb.create_table(
+            TableName="Prompts",
+            KeySchema=[
+                {
+                    "AttributeName": "prompt_id",
+                    "KeyType": "HASH"
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    "AttributeName": "prompt_id",
+                    "AttributeType": "S"
+                },
+                {
+                    "AttributeName": "user_id",
+                    "AttributeType": "S"
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
+            },
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "UserIndex",
+                    "KeySchema":[
+                        {
+                            "AttributeName": "user_id",
+                            "KeyType": "HASH"
+                        }
+                    ],
+                    "Projection" : {
+                        "ProjectionType": "ALL"
+                    },
+                    "ProvisionedThroughput": {
+                        "ReadCapacityUnits": 5,
+                        "WriteCapacityUnits": 5
+                    },
+                }
+            ]
+        )
+    except dynamodb.meta.client.exceptions.ResourceInUseException:
+        prompts_table = dynamodb.Table("Prompts")
 
-prompts_table = dynamodb.create_table(
-    TableName="Prompts",
-    KeySchema=[
-        {
-            "AttributeName": "prompt_id",
-            "KeyType": "HASH"
-        }
-    ],
-    AttributeDefinitions=[
-        {
-            "AttributeName": "prompt_id",
-            "AttributeType": "S"
-        },
-        {
-            "AttributeName": "user_id",
-            "AttributeType": "S"
-        }
-    ],
-    ProvisionedThroughput={
-        'ReadCapacityUnits': 5,
-        'WriteCapacityUnits': 5
-    },
-    GlobalSecondaryIndexes=[
-        {
-            "IndexName": "UserIndex",
-            "KeySchema":[
+
+def create_sessions_table():
+    try:
+        sessions_table = dynamodb.create_table(
+            TableName="Sessions",
+            KeySchema=[
                 {
                     "AttributeName": "user_id",
                     "KeyType": "HASH"
+                },
+                { 
+                    "AttributeName": "session_id", 
+                    "KeyType": "RANGE" 
                 }
             ],
-            "Projection" : {
-                "ProjectionType": "ALL"
-            },
-            "ProvisionedThroughput": {
-                "ReadCapacityUnits": 5,
-                "WriteCapacityUnits": 5
-            },
-        }
-    ]
-)
-
-sessions_table = dynamodb.create_table(
-    TableName="Sessions",
-    KeySchema=[
-        {
-            "AttributeName": "user_id",
-            "KeyType": "HASH"
-        },
-        { 
-            "AttributeName": "session_id", 
-            "KeyType": "RANGE" 
-        }
-    ],
-    AttributeDefinitions=[
-        {
-            "AttributeName": "user_id",
-            "AttributeType": "S"
-        },
-        {
-            "AttributeName": "session_id",
-            "AttributeType": "S"
-        }
-    ],
-    ProvisionedThroughput={
-        'ReadCapacityUnits': 5,
-        'WriteCapacityUnits': 5
-    },
-    GlobalSecondaryIndexes=[
-        {
-            "IndexName": "SessionIndex",
-            "KeySchema":[
+            AttributeDefinitions=[
+                {
+                    "AttributeName": "user_id",
+                    "AttributeType": "S"
+                },
                 {
                     "AttributeName": "session_id",
-                    "KeyType": "HASH"
+                    "AttributeType": "S"
                 }
             ],
-            "Projection" : {
-                "ProjectionType": "ALL"
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
             },
-            "ProvisionedThroughput": {
-                "ReadCapacityUnits": 5,
-                "WriteCapacityUnits": 5
-            },
-        }
-    ]
-)
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "SessionIndex",
+                    "KeySchema":[
+                        {
+                            "AttributeName": "session_id",
+                            "KeyType": "HASH"
+                        }
+                    ],
+                    "Projection" : {
+                        "ProjectionType": "ALL"
+                    },
+                    "ProvisionedThroughput": {
+                        "ReadCapacityUnits": 5,
+                        "WriteCapacityUnits": 5
+                    },
+                }
+            ]
+        )
+    except dynamodb.meta.client.exceptions.ResourceInUseException:
+        sessions_table = dynamodb.Table("Sessions")
 
-users_table.meta.client.get_waiter('table_exists').wait(TableName='Users')
-prompts_table.meta.client.get_waiter('table_exists').wait(TableName='Prompts')
-sessions_table.meta.client.get_waiter('table_exists').wait(TableName='Sessions')
 
-print("✅ Table status (Users):", users_table.table_status)
-print("✅ Table status (Prompts):", prompts_table.table_status)
-print("✅ Table status (Sessions):", sessions_table.table_status)
+if __name__ == "__main__":
+    # Call table creation 
+    create_users_table()
+    create_prompts_table()
+    create_sessions_table()
+
+
+    # Get table handles for waiters and status
+    users_table = dynamodb.Table("Users")
+    prompts_table = dynamodb.Table("Prompts")
+    sessions_table = dynamodb.Table("Sessions")
+
+
+    users_table.meta.client.get_waiter('table_exists').wait(TableName='Users')
+    prompts_table.meta.client.get_waiter('table_exists').wait(TableName='Prompts')
+    sessions_table.meta.client.get_waiter('table_exists').wait(TableName='Sessions')
+
+
+    print("✅ Table status (Users):", users_table.table_status)
+    print("✅ Table status (Prompts):", prompts_table.table_status)
+    print("✅ Table status (Sessions):", sessions_table.table_status)

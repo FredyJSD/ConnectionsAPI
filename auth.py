@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify, session, abort
 from jose import jwt
 import boto3
-import os
 import requests
 from config import REGION, USER_POOL_ID, CLIENT_ID, JWKS
 from utils import login_required
@@ -27,8 +26,8 @@ def verify_token(token):
         token, 
         key, 
         algorithms=["RS256"], 
-        audience=os.getenv("CLIENT_ID"), 
-        issuer=f"https://cognito-idp.{os.getenv('COGNITO_REGION')}.amazonaws.com/{os.getenv('USER_POOL_ID')}"
+        audience=CLIENT_ID, 
+        issuer=f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}"
     )
     return claims
 
@@ -37,7 +36,7 @@ def verify_token(token):
 def register_user(username, email, password):
     try:
         cognito_client.sign_up(
-            ClientId=os.getenv('CLIENT_ID'),
+            ClientId=CLIENT_ID,
             Username=username,
             Password=password,
             UserAttributes=[
@@ -56,7 +55,7 @@ def register_user(username, email, password):
 def login_user(email, password):
     try:
         response = cognito_client.initiate_auth(
-            ClientId = os.getenv('CLIENT_ID'),
+            ClientId = CLIENT_ID,
             AuthFlow='USER_PASSWORD_AUTH',
             AuthParameters = {
                 'USERNAME': email,
@@ -101,7 +100,8 @@ def me():
             "user_id": claims["sub"],
             "email": claims.get("email")
         }), 200
-    except Exception:
+    except Exception as e:
+        print(f"[TOKEN ERROR] {str(e)}")
         return jsonify({"error": "Invalid token"}), 401
 
 
