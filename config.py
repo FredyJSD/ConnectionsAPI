@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import requests
+import boto3
 
 load_dotenv()
 
@@ -10,8 +11,13 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 
 
 # Load public keys to verify tokens
-JWKS_URL = f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
-JWKS = requests.get(JWKS_URL).json()["keys"]
+try:
+    JWKS_URL = f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
+    JWKS = requests.get(JWKS_URL).json()["keys"]
+except Exception as e:
+    JWKS = []
+    print("Failed to fetch JWKS:", e)
+
 
 # Cognito SDK client
-cognito_client = boto3.client('cognito-idp', region_name=os.getenv('COGNITO_REGION'))
+cognito_client = boto3.client('cognito-idp', region_name=REGION)

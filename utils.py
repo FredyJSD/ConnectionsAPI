@@ -1,3 +1,8 @@
+from functools import wraps
+from flask import request, session, jsonify, abort
+from auth import verify_token
+
+
 # LOGIN REQUIRED DECORATOR
 def login_required(f):
     @wraps(f)
@@ -5,11 +10,14 @@ def login_required(f):
         if 'user' not in session:
             return f(*args, **kwargs)
 
-        authorization_header = request.header.get("Authorization", "")
+        authorization_header = request.headers.get("Authorization", "")
         token = authorization_header.replace("Bearer ", "")
+
+        if not token:
+            return jsonify({"error": "Missing access token"}), 401
+
         try:
             claims = verify_token(token)
-            # Optionally cache in request context or session
             return f(*args, **kwargs)
         except Exception:
             return jsonify({"error": "Authentication required"}), 401

@@ -1,5 +1,6 @@
 import boto3
 from config import REGION
+from seed_prompts import seed_prompts_data
 
 
 dynamodb = boto3.resource('dynamodb', region_name=REGION)
@@ -148,3 +149,6 @@ if __name__ == "__main__":
     print("✅ Table status (Users):", users_table.table_status)
     print("✅ Table status (Prompts):", prompts_table.table_status)
     print("✅ Table status (Sessions):", sessions_table.table_status)
+
+
+    seed_prompts_data()

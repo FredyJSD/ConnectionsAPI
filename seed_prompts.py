@@ -1,10 +1,11 @@
 import boto3
 import uuid
+from config import REGION
+from db import prompts_table
 
 
 # Connect to DynamoDB
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-prompts_table = dynamodb.Table('Prompts')
+dynamodb = boto3.resource('dynamodb', region_name=REGION)
 
 
 SEED_PROMPTS = [
@@ -60,13 +61,16 @@ SEED_PROMPTS = [
     {"level": "deep", "text": "What kind of legacy do you want to leave behind?"},
 ]
 
-SYSTEM_USER_ID = "ADMIN"
 
-for prompt in SEED_PROMPTS:
-    prompts_table.put_item(Item={
-        "prompt_id": str(uuid.uuid4()),
-        "text": prompt["text"],
-        "level": prompt["level"],
-        "user_id": SYSTEM_USER_ID,
-        "public": True
-    })
+def seed_prompts_data():
+    SYSTEM_USER_ID = "ADMIN"
+    for prompt in SEED_PROMPTS:
+        prompts_table.put_item(Item={
+            "prompt_id": str(uuid.uuid4()),
+            "text": prompt["text"],
+            "level": prompt["level"],
+            "user_id": SYSTEM_USER_ID,
+            "public": True
+        })
+
+    print(f"Seeded {len(SEED_PROMPTS)} prompts to DynamoDB.")
