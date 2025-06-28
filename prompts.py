@@ -113,6 +113,8 @@ def add_prompt():
         return jsonify({"error": "Missing text or level"}), 400
 
     user_id = get_user_id_from_request()
+    print("[DEBUG] user_id from token:", user_id)
+
     text = data.get("text")
     level = data.get("level")
 

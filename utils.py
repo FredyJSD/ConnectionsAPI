@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import request, session, jsonify, abort
-from auth import verify_token
+from jose import jwt
+from config import JWKS, CLIENT_ID, REGION, USER_POOL_ID
 
 
 # LOGIN REQUIRED DECORATOR
@@ -38,4 +39,28 @@ def get_user_id_from_request():
         return claims["sub"]  # user_id from Cognito
     except Exception:
         abort(401, description="Invalid or missing token")
+
+
+# VERIFY TOKEN
+def verify_token(token):
+    headers = jwt.get_unverified_header(token)
+
+    key = None
+    for k in JWKS:
+        if k["kid"] == headers["kid"]:
+            key = k
+            break
+
+    if key is None:
+        raise ValueError("No matching key found for the given 'kid'")
+
+    claims = jwt.decode(
+        token, 
+        key, 
+        algorithms=["RS256"], 
+        audience=CLIENT_ID, 
+        issuer=f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}"
+    )
+    return claims
+
 

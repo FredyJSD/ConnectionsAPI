@@ -3,33 +3,10 @@ from jose import jwt
 import boto3
 import requests
 from config import REGION, USER_POOL_ID, CLIENT_ID, JWKS
-from utils import login_required
+from utils import login_required, verify_token
 
 auth_bp = Blueprint("auth", __name__)
 cognito_client = boto3.client('cognito-idp', region_name=REGION)
-
-
-# VERIFY TOKEN
-def verify_token(token):
-    headers = jwt.get_unverified_header(token)
-
-    key = None
-    for k in JWKS:
-        if k["kid"] == headers["kid"]:
-            key = k
-            break
-
-    if key is None:
-        raise ValueError("No matching key found for the given 'kid'")
-
-    claims = jwt.decode(
-        token, 
-        key, 
-        algorithms=["RS256"], 
-        audience=CLIENT_ID, 
-        issuer=f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}"
-    )
-    return claims
 
 
 # Register New User 
@@ -66,8 +43,18 @@ def login_user(email, password):
             "access_token": response["AuthenticationResult"]["AccessToken"],
             "id_token": response["AuthenticationResult"]["IdToken"]
         }
+
+    except cognito_client.exceptions.UserNotConfirmedException:
+        return {"error": "Email not verified. Please check your inbox to confirm your account."}, 403
+
+    except cognito_client.exceptions.NotAuthorizedException:
+        return {"error": "Incorrect email or password."}, 403
+
+    except cognito_client.exceptions.UserNotFoundException:
+        return {"error": "User does not exist."}, 404
+
     except Exception as e:
-        return {"error": f"Login failed: {str(e)}"}
+        return {"error": f"Login failed: {str(e)}"}, 500
 
 
 # --------------------
@@ -86,6 +73,10 @@ def register():
 def login():
     data = request.json
     result = login_user(data["email"], data["password"])
+
+    if isinstance(result, tuple): 
+        return jsonify(result[0]), result[1]
+
     return jsonify(result)
 
 
