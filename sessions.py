@@ -33,9 +33,9 @@ def session_prompts(user_id, level=None):
     response = []
     for prompt in selected_prompts:
         response.append({
-            'prompt_id': prompt["prompt_id"],
-            'text': prompt['text'],
-            'level': prompt['level'],
+            'prompt_id': prompt.get("prompt_id"),
+            'text': prompt.get('text'),
+            'level': prompt.get('level'),
             'response': None
         })
 
@@ -77,7 +77,7 @@ def get_session_prompts(session_id, user_id):
     if not item:
         return jsonify({'error': 'Session not found'}), 404
     
-    prompts = item["prompts"]
+    prompts = item.get('prompts')
     if prompts is None:
         return jsonify({'error': 'Prompts not found for this session'}), 404
 
@@ -100,7 +100,7 @@ def prompt_response(session_id, data, user_id):
     if not item:
         return jsonify({'error': 'Session not found'}), 404
     
-    prompts = item["prompts"]
+    prompts = item.get('prompts')
 
     if prompts is None:
         return jsonify({'error': 'Prompts not found for this session'}), 404
@@ -112,7 +112,7 @@ def prompt_response(session_id, data, user_id):
                 sessions_table.put_item(Item=item)
                 return jsonify({"status": "success", "message": "Response recorded"}), 201
             else:
-                return jsonify({"Response Already Exists": prompt['response']}), 403
+                return jsonify({"Response Already Exists": prompt.get('response')}), 403
     
     return jsonify({"error": "Prompt ID not found in session"}), 404
 
