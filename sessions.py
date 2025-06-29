@@ -8,7 +8,7 @@ import random
 sessions_bp = Blueprint("sessions", __name__)
 
 # Create Session
-def create_session(user_id, session_id, prompts):
+def create_user_session(user_id, session_id, prompts):
     sessions_table.put_item(Item={
         'session_id': session_id,
         'user_id': user_id,
@@ -50,7 +50,7 @@ def get_session_by_id(session_id, user_id):
         }
     )
 
-    return response["Item"] #Will return None if not found
+    return response.get("Item") #Will return None if not found
 
 
 # Delete Session
@@ -72,7 +72,7 @@ def get_session_prompts(session_id, user_id):
         }
     )
 
-    item = response["Item"]
+    item = response.get("Item")
 
     if not item:
         return jsonify({'error': 'Session not found'}), 404
@@ -95,7 +95,7 @@ def prompt_response(session_id, data, user_id):
             "session_id": session_id
         }
     )
-    item = response["Item"]
+    item = response.get("Item")
 
     if not item:
         return jsonify({'error': 'Session not found'}), 404
@@ -129,7 +129,7 @@ def create_session(session_id):
     level = request.args.get("level")
     user_id = get_user_id_from_request()
     prompts = session_prompts(user_id, level)
-    create_session(user_id, session_id, prompts)
+    create_user_session(user_id, session_id, prompts)
     return jsonify({"session_id": session_id}), 201
 
 
