@@ -177,5 +177,8 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-#Zappa
+# Zappa
 zappa_settings.json
+
+# Zip Files
+*.zip
