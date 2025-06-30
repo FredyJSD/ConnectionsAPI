@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from dotenv import load_dotenv
 import os
 
@@ -15,6 +15,11 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "random-key")
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(prompts_bp, url_prefix='/prompts')
 app.register_blueprint(sessions_bp, url_prefix='/sessions')
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
 
 
 if __name__ == '__main__':
